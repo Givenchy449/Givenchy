@@ -1,168 +1,335 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Deriv Digit Analyzer</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deriv Digit Analyzer - Live</title>
+    <style>
+        :root {
+            --bg-color: #0b1426;
+            --card-bg: #1a263f;
+            --text-color: #ffffff;
+            --text-secondary: #94a3b8;
+            --accent-green: #00c853;
+            --even-color: #3b82f6;
+            --odd-color: #ef4444;
+        }
 
-<style>
-body{
-  margin:0;
-  padding:15px;
-  background:#111827;
-  color:white;
-  font-family:Arial,sans-serif;
-}
-h1{text-align:center;font-size:24px}
-.box{
-  background:#1f2937;
-  padding:15px;
-  margin:12px 0;
-  border-radius:12px;
-}
-textarea{
-  width:100%;
-  box-sizing:border-box;
-  min-height:130px;
-  background:#0f172a;
-  color:white;
-  border:1px solid #475569;
-  border-radius:8px;
-  padding:12px;
-  font-size:16px;
-}
-button{
-  width:100%;
-  padding:14px;
-  margin-top:10px;
-  border:0;
-  border-radius:8px;
-  background:#22c55e;
-  color:white;
-  font-size:17px;
-  font-weight:bold;
-}
-.stats{
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:10px;
-}
-.stat{
-  background:#374151;
-  padding:12px;
-  border-radius:8px;
-  text-align:center;
-}
-.number{
-  font-size:24px;
-  font-weight:bold;
-}
-.good{color:#22c55e}
-.warn{color:#facc15}
-.bad{color:#ef4444}
-#result{
-  font-size:20px;
-  text-align:center;
-  padding:15px;
-}
-.small{
-  color:#cbd5e1;
-  font-size:13px;
-  line-height:1.5;
-}
-</style>
+        body {
+            margin: 0;
+            padding: 16px;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 480px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            padding: 12px 0;
+        }
+
+        .logo-box {
+            display: flex;
+            gap: 2px;
+        }
+
+        .logo-bar {
+            width: 6px;
+            background-color: var(--accent-green);
+            border-radius: 2px;
+        }
+        .logo-bar:nth-child(1) { height: 14px; background-color: #ef4444; }
+        .logo-bar:nth-child(2) { height: 22px; background-color: #eab308; }
+        .logo-bar:nth-child(3) { height: 28px; background-color: #00c853; }
+
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+        }
+
+        .card-title {
+            font-size: 16px;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .live-status-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .pulse-dot {
+            width: 10px;
+            height: 10px;
+            background-color: var(--accent-green);
+            border-radius: 50%;
+            box-shadow: 0 0 0 0 rgba(0, 200, 83, 0.7);
+            animation: pulse 1.6s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 200, 83, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(0, 200, 83, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 200, 83, 0); }
+        }
+
+        .last-digit-display {
+            font-size: 64px;
+            font-weight: 800;
+            text-align: center;
+            margin: 10px 0;
+            color: var(--accent-green);
+            text-shadow: 0 0 10px rgba(0, 200, 83, 0.2);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .stat-box {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+        }
+
+        .stat-label {
+            font-size: 14px;
+            color: var(--text-secondary);
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+
+        .stat-val {
+            font-size: 28px;
+            font-weight: 700;
+        }
+
+        .digit-bar-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 8px;
+        }
+
+        .digit-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .digit-num {
+            width: 20px;
+            font-weight: 700;
+            font-size: 15px;
+        }
+
+        .bar-wrapper {
+            flex-grow: 1;
+            background-color: rgba(255, 255, 255, 0.05);
+            height: 12px;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        .bar-fill {
+            height: 100%;
+            width: 0%;
+            border-radius: 6px;
+            transition: width 0.3s ease;
+        }
+
+        .even-fill { background-color: var(--even-color); }
+        .odd-fill { background-color: var(--odd-color); }
+
+        .digit-pct {
+            width: 45px;
+            text-align: right;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
+        .streak-container {
+            font-size: 15px;
+            line-height: 1.5;
+        }
+
+        .alert-box {
+            border-left: 4px solid var(--accent-green);
+            background: rgba(0, 200, 83, 0.08);
+            padding: 12px;
+            border-radius: 0 8px 8px 0;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+    </style>
 </head>
-
 <body>
 
-<h1>📊 Deriv Digit Analyzer</h1>
-
-<div class="box">
-  <b>Enter the latest digits</b>
-  <p class="small">
-    Enter digits from 0–9. Separate them with spaces or commas.
-    For example: 1 4 7 2 8 8 3 0
-  </p>
-
-  <textarea id="digits"
-  placeholder="Example: 1 4 7 2 8 8 3 0 6 5"></textarea>
-
-  <button onclick="analyze()">ANALYZE</button>
-</div>
-
-<div class="box">
-  <div class="stats">
-    <div class="stat">
-      <div>Even</div>
-      <div class="number" id="even">0</div>
+<div class="container">
+    
+    <div class="header">
+        <div class="logo-box">
+            <div class="logo-bar"></div>
+            <div class="logo-bar"></div>
+            <div class="logo-bar"></div>
+        </div>
+        <h1>Deriv Digit Analyzer</h1>
     </div>
 
-    <div class="stat">
-      <div>Odd</div>
-      <div class="number" id="odd">0</div>
+    <div class="card">
+        <div class="live-status-container">
+            <span class="card-title" style="margin:0;">Volatility 10 Index</span>
+            <div class="status-badge">
+                <div class="pulse-dot"></div>
+                <span id="connection-status">Connecting...</span>
+            </div>
+        </div>
+        <div class="last-digit-display" id="current-digit">-</div>
     </div>
 
-    <div class="stat">
-      <div>Even %</div>
-      <div class="number" id="evenPct">0%</div>
+    <div class="stats-grid">
+        <div class="stat-box">
+            <div class="stat-label">Even Counts</div>
+            <div id="even-count" class="stat-val" style="color: var(--even-color);">0</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-label">Odd Counts</div>
+            <div id="odd-count" class="stat-val" style="color: var(--odd-color);">0</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-label">Even Ratio</div>
+            <div id="even-pct" class="stat-val" style="color: var(--even-color);">0%</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-label">Odd Ratio</div>
+            <div id="odd-pct" class="stat-val" style="color: var(--odd-color);">0%</div>
+        </div>
     </div>
 
-    <div class="stat">
-      <div>Odd %</div>
-      <div class="number" id="oddPct">0%</div>
+    <div class="card">
+        <div class="card-title">Individual Digit Frequency (Last 100 Ticks)</div>
+        <div class="digit-bar-container" id="digit-bars-root"></div>
     </div>
-  </div>
-</div>
 
-<div class="box">
-  <b>Recent Streak</b>
-  <p id="streak">Waiting for data...</p>
-</div>
+    <div class="card">
+        <div class="card-title">Recent Streak Patterns</div>
+        <div class="streak-container" id="streak-display">
+            Waiting for data stream synchronization...
+        </div>
+    </div>
 
-<div class="box">
-  <b>Analysis</b>
-  <div id="result">
-    Enter digits and press ANALYZE.
-  </div>
-</div>
+    <div class="card">
+        <div class="card-title">Digit Match Advisor</div>
+        <div class="alert-box" id="analysis-advice">
+            Analyzing streaming market flow configurations... Keep window open.
+        </div>
+    </div>
 
-<div class="box">
-  <b>Entry Conditions</b>
-  <p id="condition1">⬜ At least 20 digits</p>
-  <p id="condition2">⬜ Distribution checked</p>
-  <p id="condition3">⬜ Recent streak checked</p>
-  <p id="condition4">⬜ Avoid extreme imbalance</p>
-</div>
-
-<div class="box">
-  <b>⚠️ Important</b>
-  <p class="small">
-    This tool analyzes historical digits only. It cannot guarantee
-    the next digit. Use it for analysis and risk management, not as
-    a guaranteed BUY signal.
-  </p>
 </div>
 
 <script>
+    const statusText = document.getElementById('connection-status');
+    const currentDigitView = document.getElementById('current-digit');
+    const evenCountView = document.getElementById('even-count');
+    const oddCountView = document.getElementById('odd-count');
+    const evenPctView = document.getElementById('even-pct');
+    const oddPctView = document.getElementById('odd-pct');
+    const digitBarsRoot = document.getElementById('digit-bars-root');
+    const streakDisplay = document.getElementById('streak-display');
+    const analysisAdvice = document.getElementById('analysis-advice');
 
-function analyze(){
+    let historyLog = [];
+    const maxWindowSize = 100;
 
-  let input=document.getElementById("digits").value;
+    let totalEvens = 0;
+    let totalOdds = 0;
+    let frequencies = Array(10).fill(0);
 
-  let digits=input
-    .replace(/,/g," ")
-    .split(/\s+/)
-    .map(Number)
-    .filter(x=>Number.isInteger(x) && x>=0 && x<=9);
+    let streakCounter = 0;
+    let streakType = null; 
+    let longestEvenStreak = 0;
+    let longestOddStreak = 0;
 
-  if(digits.length===0){
-    document.getElementById("result").innerHTML=
-      "<span class='bad'>Enter valid digits first.</span>";
-    return;
-  }
+    function setupBarLayouts() {
+        digitBarsRoot.innerHTML = '';
+        for (let i = 0; i <= 9; i++) {
+            const isEven = (i % 2 === 0);
+            const row = document.createElement('div');
+            row.className = 'digit-row';
+            row.innerHTML = `
+                <div class="digit-num" style="color: ${isEven ? 'var(--even-color)' : 'var(--odd-color)'}">${i}</div>
+                <div class="bar-wrapper">
+                    <div id="bar-fill-${i}" class="bar-fill ${isEven ? 'even-fill' : 'odd-fill'}"></div>
+                </div>
+                <div id="bar-pct-${i}" class="digit-pct">0%</div>
+            `;
+            digitBarsRoot.appendChild(row);
+        }
+    }
+    setupBarLayouts();
 
-  let even=digits.filter(x=>x%2===0).length;
-  let odd=digits.length-even;
+    const socket = new WebSocket('wss://://derivws.com');
 
-  let evenPct=(even/digits.length*100).toFixed(1);
-  let oddPct=(odd/digits
+    socket.onopen = function() {
+        statusText.innerText = "Live Connected";
+        socket.send(JSON.stringify({ ticks: 'R_10' }));
+    };
+
+    socket.onclose = function() {
+        statusText.innerText = "Disconnected";
+        statusText.style.color = "#ef4444";
+    };
+
+    socket.onerror = function() {
+        statusText.innerText = "Error Occurred";
+    };
+
+    socket.onmessage = function(event) {
+        const payload = JSON.parse(event.data);
+        
+        if (payload.tick) {
+            const rawQuote = payload.tick.quote.toString();
+            const currentDigit = parseInt(rawQuote.slice(-1));
+
+            currentDigitView.innerText = currentDigit;
+            if (currentDigit % 2 === 0) {
+                currentDigitView.style.color = "var(--even-color)";
