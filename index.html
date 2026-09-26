@@ -1,39 +1,74 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Deriv Digit Analyzer</title>
 
 <style>
-body {
-  font-family: Arial, sans-serif;
+body{
+  margin:0;
+  padding:15px;
   background:#111827;
   color:white;
-  padding:15px;
+  font-family:Arial,sans-serif;
 }
-h1 { text-align:center; }
-.box {
+h1{text-align:center;font-size:24px}
+.box{
   background:#1f2937;
   padding:15px;
   margin:12px 0;
   border-radius:12px;
 }
-.digits {
-  word-break:break-all;
-  line-height:2;
-  font-size:20px;
+textarea{
+  width:100%;
+  box-sizing:border-box;
+  min-height:130px;
+  background:#0f172a;
+  color:white;
+  border:1px solid #475569;
+  border-radius:8px;
+  padding:12px;
+  font-size:16px;
 }
-.stat {
-  display:flex;
-  justify-content:space-between;
-  padding:5px;
-}
-button {
+button{
   width:100%;
   padding:14px;
+  margin-top:10px;
   border:0;
   border-radius:8px;
+  background:#22c55e;
+  color:white;
   font-size:17px;
+  font-weight:bold;
+}
+.stats{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+}
+.stat{
+  background:#374151;
+  padding:12px;
+  border-radius:8px;
+  text-align:center;
+}
+.number{
+  font-size:24px;
+  font-weight:bold;
+}
+.good{color:#22c55e}
+.warn{color:#facc15}
+.bad{color:#ef4444}
+#result{
+  font-size:20px;
+  text-align:center;
+  padding:15px;
+}
+.small{
+  color:#cbd5e1;
+  font-size:13px;
+  line-height:1.5;
 }
 </style>
 </head>
@@ -43,225 +78,91 @@ button {
 <h1>📊 Deriv Digit Analyzer</h1>
 
 <div class="box">
-  <b>Connection:</b>
-  <span id="status">Connecting...</span>
+  <b>Enter the latest digits</b>
+  <p class="small">
+    Enter digits from 0–9. Separate them with spaces or commas.
+    For example: 1 4 7 2 8 8 3 0
+  </p>
+
+  <textarea id="digits"
+  placeholder="Example: 1 4 7 2 8 8 3 0 6 5"></textarea>
+
+  <button onclick="analyze()">ANALYZE</button>
 </div>
 
 <div class="box">
-  <b>Last 100 Digits</b>
-  <div id="digits" class="digits">Waiting...</div>
-</div>
+  <div class="stats">
+    <div class="stat">
+      <div>Even</div>
+      <div class="number" id="even">0</div>
+    </div>
 
-<div class="box">
-  <h3>Even / Odd</h3>
-  <div class="stat">
-    <span>Even</span>
-    <span id="even">0%</span>
+    <div class="stat">
+      <div>Odd</div>
+      <div class="number" id="odd">0</div>
+    </div>
+
+    <div class="stat">
+      <div>Even %</div>
+      <div class="number" id="evenPct">0%</div>
+    </div>
+
+    <div class="stat">
+      <div>Odd %</div>
+      <div class="number" id="oddPct">0%</div>
+    </div>
   </div>
-  <div class="stat">
-    <span>Odd</span>
-    <span id="odd">0%</span>
+</div>
+
+<div class="box">
+  <b>Recent Streak</b>
+  <p id="streak">Waiting for data...</p>
+</div>
+
+<div class="box">
+  <b>Analysis</b>
+  <div id="result">
+    Enter digits and press ANALYZE.
   </div>
 </div>
 
 <div class="box">
-  <h3>Digit Frequency</h3>
-  <div id="frequency"></div>
+  <b>Entry Conditions</b>
+  <p id="condition1">⬜ At least 20 digits</p>
+  <p id="condition2">⬜ Distribution checked</p>
+  <p id="condition3">⬜ Recent streak checked</p>
+  <p id="condition4">⬜ Avoid extreme imbalance</p>
 </div>
 
 <div class="box">
-  <h3>Current Streak</h3>
-  <div id="streak">Waiting...</div>
-</div>
-
-<div class="box">
-  <h3>Analysis</h3>
-  <div id="analysis">Collecting digits...</div>
+  <b>⚠️ Important</b>
+  <p class="small">
+    This tool analyzes historical digits only. It cannot guarantee
+    the next digit. Use it for analysis and risk management, not as
+    a guaranteed BUY signal.
+  </p>
 </div>
 
 <script>
 
-const SYMBOL = "R_100";
-const MAX_DIGITS = 100;
+function analyze(){
 
-let digits = [];
+  let input=document.getElementById("digits").value;
 
-const ws = new WebSocket(
-  "wss://ws.derivws.com/websockets/v3?app_id=1089"
-);
+  let digits=input
+    .replace(/,/g," ")
+    .split(/\s+/)
+    .map(Number)
+    .filter(x=>Number.isInteger(x) && x>=0 && x<=9);
 
-ws.onopen = function() {
-  document.getElementById("status").innerHTML =
-    "🟢 Connected";
-
-  ws.send(JSON.stringify({
-    ticks: SYMBOL,
-    subscribe: 1
-  }));
-};
-
-ws.onerror = function() {
-  document.getElementById("status").innerHTML =
-    "🔴 Connection error";
-};
-
-ws.onclose = function() {
-  document.getElementById("status").innerHTML =
-    "🔴 Disconnected";
-};
-
-ws.onmessage = function(event) {
-
-  const data = JSON.parse(event.data);
-
-  if (!data.tick) return;
-
-  const quote = String(data.tick.quote);
-
-  const digit = Number(
-    quote.slice(-1)
-  );
-
-  if (isNaN(digit)) return;
-
-  digits.push(digit);
-
-  if (digits.length > MAX_DIGITS) {
-    digits.shift();
-  }
-
-  updateDisplay();
-};
-
-function updateDisplay() {
-
-  document.getElementById("digits").innerHTML =
-    digits.join(" ");
-
-  if (digits.length === 0) return;
-
-  let even = 0;
-
-  digits.forEach(d => {
-    if (d % 2 === 0) even++;
-  });
-
-  const odd = digits.length - even;
-
-  document.getElementById("even").innerHTML =
-    ((even / digits.length) * 100).toFixed(1) + "%";
-
-  document.getElementById("odd").innerHTML =
-    ((odd / digits.length) * 100).toFixed(1) + "%";
-
-  showFrequency();
-  showStreak();
-  showAnalysis();
-}
-
-function showFrequency() {
-
-  let count = [
-    0,0,0,0,0,
-    0,0,0,0,0
-  ];
-
-  digits.forEach(d => {
-    count[d]++;
-  });
-
-  let html = "";
-
-  for (let i = 0; i <= 9; i++) {
-
-    let percent =
-      ((count[i] / digits.length) * 100)
-      .toFixed(1);
-
-    html +=
-      "<div class='stat'>" +
-      "<span>Digit " + i + "</span>" +
-      "<span>" + count[i] +
-      " (" + percent + "%)</span>" +
-      "</div>";
-  }
-
-  document.getElementById("frequency").innerHTML =
-    html;
-}
-
-function showStreak() {
-
-  if (digits.length === 0) return;
-
-  const last = digits[digits.length - 1];
-
-  let streak = 0;
-
-  for (let i = digits.length - 1;
-       i >= 0;
-       i--) {
-
-    if ((digits[i] % 2) ===
-        (last % 2)) {
-      streak++;
-    } else {
-      break;
-    }
-  }
-
-  const type =
-    last % 2 === 0 ? "EVEN" : "ODD";
-
-  document.getElementById("streak").innerHTML =
-    type + " × " + streak;
-}
-
-function showAnalysis() {
-
-  if (digits.length < 30) {
-
-    document.getElementById("analysis").innerHTML =
-      "⏳ Collecting more data...";
-
+  if(digits.length===0){
+    document.getElementById("result").innerHTML=
+      "<span class='bad'>Enter valid digits first.</span>";
     return;
   }
 
-  let even = 0;
+  let even=digits.filter(x=>x%2===0).length;
+  let odd=digits.length-even;
 
-  digits.forEach(d => {
-    if (d % 2 === 0) even++;
-  });
-
-  const evenPercent =
-    even / digits.length * 100;
-
-  const oddPercent =
-    100 - evenPercent;
-
-  let message =
-    "WAIT — statistics only. " +
-    "Past digits do not guarantee the next digit.";
-
-  if (evenPercent >= 60) {
-
-    message =
-      "EVEN is currently more frequent " +
-      "in this sample. WAIT for confirmation.";
-  }
-
-  if (oddPercent >= 60) {
-
-    message =
-      "ODD is currently more frequent " +
-      "in this sample. WAIT for confirmation.";
-  }
-
-  document.getElementById("analysis").innerHTML =
-    message;
-}
-
-</script>
-
-</body>
-</html>
+  let evenPct=(even/digits.length*100).toFixed(1);
+  let oddPct=(odd/digits
